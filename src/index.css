@@ -1,0 +1,42 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --color-brand-600: #27ae60;
+  --color-brand-500: #2ecc71;
+  --color-mint-50: #ecfdf5;
+  --color-mint-100: #d1fae5;
+  --shadow-soft: 0 10px 40px -12px rgb(39 174 96 / 0.18);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+/* Gentle pulse for loaders */
+@keyframes stem-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-stem-pulse {
+  animation: stem-pulse 1.2s ease-in-out infinite;
+}
