@@ -162,7 +162,7 @@ export default function NarrativeLearning() {
   const [scienceDifficulty, setScienceDifficulty] = useState('high')
 
   const [textbookId, setTextbookId] = useState('g10p1')
-  const [topicId, setTopicId] = useState('newtons-laws')
+  const [topicId, setTopicId] = useState('ohms-law')
   const [focusText, setFocusText] = useState('Explain 3rd law')
 
   const [loading, setLoading] = useState(false)

@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Loader } from '../components/common/Loader.jsx'
 import { Modal } from '../components/common/Modal.jsx'
 import { AssessmentReportDashboard } from '../components/quiz/AssessmentReportDashboard.jsx'
+import { FaceTrackingPanel } from '../components/quiz/FaceTrackingPanel.jsx'
 import { GamifiedQuestionCard } from '../components/quiz/GamifiedQuestionCard.jsx'
 import { QuizLessonIntro } from '../components/quiz/QuizLessonIntro.jsx'
-import { HEART_LESSON, HEART_QUIZ_QUESTIONS } from '../data/heartAssessmentQuiz.js'
-import { BookOpen, Plus, Trophy, Video, Zap } from 'lucide-react'
+import { OHMS_LESSON, OHMS_QUIZ_QUESTIONS } from '../data/ohmsLawLessonQuiz.js'
+import { BookOpen, Plus, Trophy, Zap } from 'lucide-react'
 
 function levelLabelFromNum(level) {
   if (level === 1) return 'Level 1 — Basic'
@@ -41,7 +42,7 @@ function buildQuizResultRow(q, index, fb, selected) {
 
 export default function AdaptiveQuiz() {
   const [phase, setPhase] = useState('intro')
-  const [questions] = useState(() => HEART_QUIZ_QUESTIONS)
+  const [questions] = useState(() => OHMS_QUIZ_QUESTIONS)
   const [idx, setIdx] = useState(0)
   const [selected, setSelected] = useState(null)
   const [feedback, setFeedback] = useState(null)
@@ -132,7 +133,7 @@ export default function AdaptiveQuiz() {
 
   const emotionForReport = demoMood === 'frustrated' ? 'stressed' : 'neutral'
 
-  const L = HEART_LESSON
+  const L = OHMS_LESSON
 
   const systemReadyPill = (
     <div
@@ -193,24 +194,7 @@ export default function AdaptiveQuiz() {
               <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 font-mono text-sm font-bold text-rose-800 ring-1 ring-rose-900/10">
                 {formatClock(elapsedSec)}
               </div>
-              <div className="w-[7.5rem] shrink-0 rounded-xl border border-emerald-900/10 bg-white/85 p-2 shadow-[0_8px_28px_-14px_rgba(15,118,110,0.35)] ring-1 ring-emerald-950/5 backdrop-blur-sm sm:w-36">
-                <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wide text-emerald-950/55">
-                  <span className="flex items-center gap-1 text-emerald-800/80">
-                    <Video className="h-3 w-3" aria-hidden />
-                    Face tracking
-                  </span>
-                  <span className="flex items-center gap-0.5 text-emerald-600">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                    active
-                  </span>
-                </div>
-                <div className="mt-1 flex aspect-video items-center justify-center rounded-lg bg-emerald-100/80 text-2xl ring-1 ring-emerald-900/5">
-                  {demoMood === 'frustrated' ? '😟' : '😐'}
-                </div>
-                <p className="mt-1 rounded-md bg-emerald-50 py-1 text-center text-[10px] font-semibold text-emerald-900">
-                  {demoMood === 'frustrated' ? 'Frustrated' : 'Neutral'}
-                </p>
-              </div>
+              <FaceTrackingPanel mood={demoMood} active />
             </div>
           </header>
 
@@ -334,7 +318,7 @@ export default function AdaptiveQuiz() {
       <Modal open={hintOpen} onClose={() => setHintOpen(false)} title="Adaptive hint">
         {current?.hint
           ? current.hint
-          : 'Link each option to a definition you can name from the AR lesson.'}
+          : 'Link each option to V, I, or R using the AR Ohm’s Law lab you just completed.'}
       </Modal>
     </div>
   )

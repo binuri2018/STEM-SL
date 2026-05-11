@@ -10,7 +10,7 @@ const modules = [
   {
     title: 'Narrative Learning',
     emoji: '📖',
-    desc: 'Personal STEM stories rooted in Sri Lankan contexts.',
+    desc: "Story-led path into Ohm's Law — same chapter as your AR lab (demo).",
     to: ROUTES.narrative,
     icon: BookOpen,
     accent: 'from-emerald-600 to-[#2ECC71]',
@@ -18,7 +18,7 @@ const modules = [
   {
     title: 'Voice Tutor',
     emoji: '🎙️',
-    desc: 'Chat-first tutoring with calm explanations.',
+    desc: "Talk through V = IR, units, and circuits with calm, chat-style help.",
     to: ROUTES.tutor,
     icon: Mic,
     accent: 'from-emerald-700 to-emerald-500',
@@ -26,7 +26,7 @@ const modules = [
   {
     title: 'Adaptive Quiz',
     emoji: '🧠',
-    desc: 'Instant feedback with hints that adapt to you.',
+    desc: "Nine-step check on Ohm's Law after the AR lesson (basic → advanced).",
     to: ROUTES.quiz,
     icon: Brain,
     accent: 'from-[#27AE60] to-emerald-400',
@@ -34,7 +34,7 @@ const modules = [
   {
     title: 'Knowledge Maps',
     emoji: '🗺️',
-    desc: 'Turn handwritten notes into clean summaries.',
+    desc: "Verify handwritten notes on circuits — demo uses Ohm's Law corrections.",
     to: ROUTES.synthesis,
     icon: ScanLine,
     accent: 'from-emerald-600 to-teal-400',

@@ -40,3 +40,25 @@ body {
 .animate-stem-pulse {
   animation: stem-pulse 1.2s ease-in-out infinite;
 }
+
+/* Fake face-analyzer “camera” sweep (Adaptive Quiz demo). */
+@keyframes face-analyzer-scan {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.85;
+  }
+  92% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(480%);
+    opacity: 0;
+  }
+}
+
+.animate-face-analyzer-scan {
+  animation: face-analyzer-scan 2.6s linear infinite;
+}

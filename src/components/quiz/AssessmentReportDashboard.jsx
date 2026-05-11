@@ -10,7 +10,8 @@ import {
   Meh,
   Frown,
 } from 'lucide-react'
-import { HEART_LESSON } from '../../data/heartAssessmentQuiz.js'
+import { OHMS_LESSON } from '../../data/ohmsLawLessonQuiz.js'
+import { useApp } from '../../context/AppContext.jsx'
 import { ROUTES } from '../../utils/routes.js'
 
 /**
@@ -52,7 +53,8 @@ export function AssessmentReportDashboard({
   hintsUsed,
   onRetry,
 }) {
-  const L = HEART_LESSON
+  const { student } = useApp()
+  const L = OHMS_LESSON
 
   const durationMs =
     startedAt != null && endedAt != null ? endedAt - startedAt : null
@@ -145,7 +147,7 @@ export function AssessmentReportDashboard({
           Assessment Report
         </div>
         <p className="mt-1 text-sm text-emerald-950/60">
-          {L.title} · {L.demoStudent?.name ?? 'Student'}
+          {L.title} · {student.name}
         </p>
       </motion.header>
 
@@ -291,14 +293,14 @@ export function AssessmentReportDashboard({
           <h4 className="text-sm font-extrabold text-rose-900">Targeted review required</h4>
           <p className="mt-2 text-xs leading-relaxed text-rose-900/85">
             Accuracy stayed under 60% on:{' '}
-            <strong>{stats.weakTags.join(', ') || 'key heart topics'}</strong>. Revisit diagrams and
-            definitions before the next attempt.
+            <strong>{stats.weakTags.join(', ') || 'key circuit topics'}</strong>. Revisit your notes
+            on V, I, and R before the next attempt.
           </p>
         </div>
         <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/90 p-4 ring-1 ring-emerald-900/10">
           <h4 className="text-sm font-extrabold text-emerald-900">Suggested next action</h4>
           <p className="mt-2 text-xs leading-relaxed text-emerald-900/85">
-            Review the basic AR heart model again to reinforce chambers, valves, and the two loops —
+            Review the AR Ohm&apos;s Law lab again — series vs parallel, SI units, and V = IR —
             then retry the assessment.
           </p>
         </div>

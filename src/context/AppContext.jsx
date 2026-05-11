@@ -10,10 +10,12 @@ const AppContext = createContext(null)
 
 const initialStudent = {
   name: 'Imandi Perera',
+  /** Stable learner id shown in quiz / reports (replace with auth when available). */
+  studentId: 'STU-SL-10-2010-8842',
   grade: 'Grade 10',
   school: 'Govigama Maha Vidyalaya',
   streakDays: 5,
-  focusSubject: 'Physics • Electricity',
+  focusSubject: "Physics • Ohm's Law",
 }
 
 const initialWeekly = [
@@ -32,7 +34,7 @@ export function AppProvider({ children }) {
   const [emotionQuiz, setEmotionQuiz] = useState(
     /** @type {'neutral' | 'happy' | 'confused' | 'stressed'} */ ('neutral'),
   )
-  const [tutorMemoryTopic, setTutorMemoryTopic] = useState('Electricity basics')
+  const [tutorMemoryTopic, setTutorMemoryTopic] = useState("Ohm's Law (V = IR)")
 
   const weeklyTotal = useMemo(
     () => weeklyMinutes.reduce((a, d) => a + d.minutes, 0),

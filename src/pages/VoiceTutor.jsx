@@ -13,26 +13,33 @@ import { useApp } from '../context/AppContext.jsx'
 import { renderRichText } from '../utils/richText.jsx'
 
 const suggestedVideos = [
-  'Ohm’s Law — intuition with water analogy',
-  'Photosynthesis — inputs & outputs in 6 minutes',
-  'Acids & bases — kitchen examples (Eng/Sinhala mix)',
+  'Ohm’s Law — V = IR with a water-pipe analogy',
+  'Series vs parallel: how current and voltage split',
+  'Electrical power: why P = VI matters for appliances',
 ]
 
-const relatedTopics = ['Series circuits', 'pH & indicators', 'Newton’s laws']
+const relatedTopics = [
+  'Resistors in series',
+  'Resistors in parallel',
+  'Electrical power P = VI',
+  'SI units for V, I, and R',
+]
 
 /** Shown in the question field when mic is on (demo “transcription”). */
 const DEMO_VOICE_TRANSCRIPT =
   "Explain Ohm's Law simply — how voltage, current, and resistance relate."
 
 export default function VoiceTutor() {
-  const { tutorMemoryTopic, setTutorMemoryTopic } = useApp()
-  const [messages, setMessages] = useState(() => [
-    {
-      role: 'assistant',
-      content:
-        'Hi! Ask me anything from your syllabus — I’ll explain calmly and suggest quick resources.',
-    },
-  ])
+  const { tutorMemoryTopic, setTutorMemoryTopic, student } = useApp()
+  const [messages, setMessages] = useState(() => {
+    const first = student.name.split(' ')[0] ?? 'there'
+    return [
+      {
+        role: 'assistant',
+        content: `Hi ${first}! This thread follows **Ohm's Law** from your AR lab — ask about V = IR, units, or series vs parallel and I’ll keep the tone calm.`,
+      },
+    ]
+  })
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [listening, setListening] = useState(false)
@@ -117,8 +124,8 @@ export default function VoiceTutor() {
     setStreamingText('')
     setActiveMeta(null)
 
-    if (/electric|ohm|circuit|battery/i.test(trimmed)) {
-      setTutorMemoryTopic('Electricity basics')
+    if (/electric|ohm|circuit|battery|volt|amp|resist/i.test(trimmed)) {
+      setTutorMemoryTopic("Ohm's Law (V = IR)")
     } else if (/photo|leaf|chlorophyll/i.test(trimmed)) {
       setTutorMemoryTopic('Photosynthesis')
     } else if (/acid|base|ph/i.test(trimmed)) {

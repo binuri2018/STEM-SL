@@ -1,15 +1,15 @@
 import { BookOpen, Clock, Lightbulb, User } from 'lucide-react'
 import { useApp } from '../../context/AppContext.jsx'
-import { HEART_LESSON } from '../../data/heartAssessmentQuiz.js'
+import { OHMS_LESSON } from '../../data/ohmsLawLessonQuiz.js'
 
 /**
  * Screen 1 — “AR Lesson Complete” before the adaptive assessment.
- * @param {{ onStart: () => void; lesson?: typeof HEART_LESSON }} props
+ * @param {{ onStart: () => void; lesson?: typeof OHMS_LESSON }} props
  */
-export function QuizLessonIntro({ onStart, lesson = HEART_LESSON }) {
+export function QuizLessonIntro({ onStart, lesson = OHMS_LESSON }) {
   const { student } = useApp()
-  const displayName = lesson.demoStudent?.name ?? student.name.split(' ')[0] ?? 'Student'
-  const displayId = lesson.demoStudent?.id ?? 'OL-DEMO-ID'
+  const displayName = student.name.split(' ')[0] ?? 'Student'
+  const displayId = student.studentId
 
   const card =
     'rounded-2xl border border-emerald-900/10 bg-white/85 p-5 shadow-[0_12px_40px_-18px_rgba(15,118,110,0.25)] ring-1 ring-emerald-950/5 backdrop-blur-sm sm:p-6'
@@ -52,23 +52,37 @@ export function QuizLessonIntro({ onStart, lesson = HEART_LESSON }) {
       </div>
 
       <div className={`mt-6 w-full ${card}`}>
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-950/45">
-          What&apos;s next?
-        </p>
-        <ul className="mt-4 space-y-4">
+        <div className="border-b border-emerald-900/10 pb-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-950/50">
+            What&apos;s next?
+          </p>
+          <p className="mt-2 text-sm font-medium leading-snug text-emerald-950/65">
+            Three short stages — <span className="font-semibold text-emerald-950">9 questions total</span>{' '}
+            (3 per level), from recall to harder reasoning.
+          </p>
+        </div>
+
+        <ul className="mt-5 space-y-5" role="list" aria-label="Assessment levels">
           {lesson.roadmap.map((row) => (
-            <li key={row.level} className="flex items-start gap-3">
+            <li key={row.level} className="flex gap-3.5 sm:gap-4">
               <span
                 className={[
-                  'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-emerald-900/10',
+                  'mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full shadow-sm ring-2 ring-white',
                   row.dotClass,
                 ].join(' ')}
+                title={`Level ${row.level}`}
                 aria-hidden
               />
-              <p className="text-sm font-bold text-emerald-950">
-                <span className="text-emerald-950/50">Level {row.level}</span>{' '}
-                <span className="font-semibold text-emerald-900/90">{row.label}</span>
-              </p>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <span className="text-[13px] font-medium text-emerald-950/45 sm:text-sm">
+                    Level {row.level}
+                  </span>
+                  <span className="text-base font-bold tracking-tight text-emerald-950 sm:text-[15px]">
+                    {row.label}
+                  </span>
+                </div>
+              </div>
             </li>
           ))}
         </ul>

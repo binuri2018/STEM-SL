@@ -10,6 +10,7 @@ export const TEXTBOOKS = [
 
 export const TOPICS_BY_TEXTBOOK = {
   g10p1: [
+    { id: 'ohms-law', label: "Ohm's Law & simple circuits" },
     { id: 'newtons-laws', label: "Newton's laws of motion" },
     { id: 'electricity', label: 'Current electricity' },
     { id: 'photosynthesis', label: 'Photosynthesis & plant nutrition' },
@@ -85,7 +86,60 @@ export const SCIENCE_NEWTON = {
   ],
 }
 
+/** Rich “Understand the Science First” layout — Ohm’s Law (aligned with AR lab + quiz). */
+export const SCIENCE_OHMS = {
+  bannerTopic: "Ohm's Law & simple circuits",
+  concept: {
+    headerClass: 'bg-blue-600/95 text-white',
+    title: 'The Concept',
+    body:
+      '**Ohm’s law** states that for many conductors at fixed temperature, the current through the conductor is directly proportional to the potential difference across it: **V = I R**, where **R** is the resistance.',
+  },
+  whyItWorks: {
+    headerClass: 'bg-emerald-600/95 text-white',
+    title: 'WHY IT WORKS',
+    body:
+      'A steady voltage “pushes” charge carriers; resistance measures how strongly the material opposes that flow. Larger **R** means smaller **I** for the same **V**, and rearranging gives **I = V/R** or **R = V/I** for checks.',
+  },
+  keyEquations: {
+    headerClass: 'bg-amber-600/95 text-white',
+    title: 'KEY EQUATIONS',
+    lines: ['V = I R', 'I = V / R', 'R = V / I', 'P = V I = I² R = V² / R'],
+  },
+  realWorld: {
+    headerClass: 'bg-violet-600/95 text-white',
+    title: 'REAL WORLD',
+    body:
+      'Phone chargers list voltage and current limits; LED strips use series resistors so **I** stays safe. Household wiring stays at ~230 V while appliance **R** sets how much current is drawn.',
+  },
+  sidebarEquationBlocks: [
+    { label: 'Ohm’s law', formula: 'V = I R' },
+    { label: 'SI units', formula: 'V → volt (V), I → ampere (A), R → ohm (Ω)' },
+  ],
+  definitions: [
+    {
+      term: 'Potential difference (V)',
+      text: 'Energy transferred per unit charge between two points in a circuit — measured in volts.',
+    },
+    {
+      term: 'Current (I)',
+      text: 'Rate of flow of electric charge through a cross-section — measured in amperes.',
+    },
+    {
+      term: 'Resistance (R)',
+      text: 'Opposition a component offers to current — measured in ohms (Ω).',
+    },
+  ],
+  examTips: [
+    'State **V = I R** before substituting numbers.',
+    'Convert kΩ or mA to base SI (Ω, A) before calculating.',
+    'For series: **R_total = ΣR**; for parallel: use **1/R_total = Σ(1/R)**.',
+    'Interpret answers: “current rises because resistance dropped” shows understanding.',
+  ],
+}
+
 export function getScienceBlocks(topicId, topicLabel) {
+  if (topicId === 'ohms-law') return SCIENCE_OHMS
   if (topicId === 'newtons-laws') return SCIENCE_NEWTON
 
   const label = topicLabel || 'this topic'
@@ -130,6 +184,7 @@ export function getScienceBlocks(topicId, topicLabel) {
 
 /** Short display name for quiz / next-steps copy */
 export function topicShortLabel(topicId, topicLabel) {
+  if (topicId === 'ohms-law') return "Ohm's Law"
   if (topicId === 'newtons-laws') return 'Newton Third Law'
   const t = (topicLabel || '').trim()
   return t.length > 42 ? `${t.slice(0, 40)}…` : t

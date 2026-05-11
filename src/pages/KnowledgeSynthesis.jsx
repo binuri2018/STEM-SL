@@ -28,45 +28,45 @@ const MAIN_TABS = [
   { id: 'synthesis', label: 'Synthesis' },
 ]
 
-/** Demo content for Verify Notes → Corrected Note (matches syllabus-style corrections UI). */
+/** Demo content for Verify Notes → Ohm's Law notes (aligned with AR lab + quiz). */
 const DEMO_CORRECTED_BULLETS = [
-  'Glucose is found in ripe fruits.',
-  'Cellulose is found in the cell walls of plant cells.',
-  'Starch turns iodine solution purplish-blue.',
-  'Lactose is composed of glucose and galactose.',
-  'Fructose is the sweetest naturally occurring sugar.',
-  'The human body contains about 65% oxygen by mass.',
+  'Ohm’s law is usually written as V = I R for a conductor at constant temperature.',
+  'The ohm (Ω) is the SI unit of resistance.',
+  'Current is measured in amperes (A).',
+  'In series, equivalent resistance is the sum of individual resistances.',
+  'Electrical power can be written as P = V I or P = I² R.',
+  'For two equal resistors in parallel, equivalent resistance is R / 2.',
 ]
 
 const DEMO_REMOVED_LINES = [
-  'Glucose is found in bee honey.',
-  'Lactose is a union of glucose and fructose.',
-  'Fructose is the sweetest sugar.',
+  'Ohm’s law is V = I / R for all materials.',
+  'Resistance is measured in volts.',
+  'In parallel, currents always stay equal in every branch.',
 ]
 
 const DEMO_AI_CORRECTIONS = [
-  '**Glucose:** say “ripe fruits” — “bee honey” alone is incomplete for your syllabus note.',
-  '**Lactose:** it is **glucose + galactose**, not glucose + fructose (that pair is sucrose).',
-  '**Fructose:** qualify as “naturally occurring” if comparing sweetness in exam answers.',
+  '**Ohm’s law:** use **V = I R** (not V = I/R) for the standard proportional form taught at OL.',
+  '**Resistance:** measured in **ohms (Ω)**, not volts.',
+  '**Parallel branches:** share the same **voltage**; branch **currents** differ unless resistors are identical.',
 ]
 
 const DEMO_VERIFICATION_ITEMS = [
   {
     ok: true,
-    statement: 'Glucose is a simple sugar found in ripe fruits.',
-    rationale: 'Matches OL biology wording on monosaccharides and dietary sources.',
+    statement: 'For many metallic conductors at fixed temperature, V is proportional to I (Ohm’s law).',
+    rationale: 'Matches syllabus wording linking potential difference, current, and resistance.',
     tag: 'SYLLABUS',
   },
   {
     ok: false,
-    statement: 'Lactose is a union of glucose and fructose.',
-    rationale: 'Syllabus defines lactose as glucose + galactose; fructose pairs with glucose in sucrose.',
+    statement: 'Resistance is measured in volts.',
+    rationale: 'Volts measure potential difference; resistance uses ohms (Ω).',
     tag: 'REVIEW',
   },
   {
     ok: true,
-    statement: 'Cellulose forms plant cell walls.',
-    rationale: 'Structural polysaccharide strand — consistent with textbook diagrams.',
+    statement: 'In series, R_total equals the sum of the separate resistances.',
+    rationale: 'Single-path current — resistances add.',
     tag: 'SYLLABUS',
   },
 ]
