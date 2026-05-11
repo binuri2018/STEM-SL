@@ -5,6 +5,7 @@ import { Button } from '../components/common/Button.jsx'
 import { ChatBubble } from '../components/common/ChatBubble.jsx'
 import { InputField } from '../components/common/InputField.jsx'
 import { RecommendationList } from '../components/chat/RecommendationList.jsx'
+import { OhmsLawDiagram } from '../components/chat/OhmsLawDiagram.jsx'
 import { TypingIndicator } from '../components/chat/TypingIndicator.jsx'
 import { StreamingAnswer } from '../components/chat/StreamingAnswer.jsx'
 import { sendTutorMessage } from '../services/aiService.js'
@@ -18,6 +19,10 @@ const suggestedVideos = [
 ]
 
 const relatedTopics = ['Series circuits', 'pH & indicators', 'Newton’s laws']
+
+/** Shown in the question field when mic is on (demo “transcription”). */
+const DEMO_VOICE_TRANSCRIPT =
+  "Explain Ohm's Law simply — how voltage, current, and resistance relate."
 
 export default function VoiceTutor() {
   const { tutorMemoryTopic, setTutorMemoryTopic } = useApp()
@@ -37,6 +42,10 @@ export default function VoiceTutor() {
   const bottomRef = useRef(null)
 
   const metaRef = useRef(null)
+  const draftRef = useRef('')
+  const demoVoiceIntervalRef = useRef(null)
+
+  draftRef.current = draft
 
   useEffect(() => {
     metaRef.current = activeMeta
@@ -48,6 +57,39 @@ export default function VoiceTutor() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, busy, streamingText])
 
+  /** Demo: type mock transcript into the question bar while “listening”. */
+  useEffect(() => {
+    if (!listening) {
+      if (demoVoiceIntervalRef.current) {
+        clearInterval(demoVoiceIntervalRef.current)
+        demoVoiceIntervalRef.current = null
+      }
+      return
+    }
+
+    const startDelay = window.setTimeout(() => {
+      if (draftRef.current.trim() !== '') return
+
+      let i = 0
+      demoVoiceIntervalRef.current = window.setInterval(() => {
+        i += 1
+        setDraft(DEMO_VOICE_TRANSCRIPT.slice(0, i))
+        if (i >= DEMO_VOICE_TRANSCRIPT.length && demoVoiceIntervalRef.current) {
+          clearInterval(demoVoiceIntervalRef.current)
+          demoVoiceIntervalRef.current = null
+        }
+      }, 28)
+    }, 320)
+
+    return () => {
+      clearTimeout(startDelay)
+      if (demoVoiceIntervalRef.current) {
+        clearInterval(demoVoiceIntervalRef.current)
+        demoVoiceIntervalRef.current = null
+      }
+    }
+  }, [listening])
+
   const handleStreamComplete = useCallback((content) => {
     const meta = metaRef.current
     setMessages((prev) => [
@@ -56,7 +98,7 @@ export default function VoiceTutor() {
         role: 'assistant',
         content,
         recommendations: meta?.recommendations,
-        diagram: meta?.diagram,
+        diagramType: meta?.diagramType,
       },
     ])
     setStreamingText('')
@@ -89,7 +131,7 @@ export default function VoiceTutor() {
       setStreamingText(data.answer)
       setActiveMeta({
         recommendations: data.recommendations,
-        diagram: data.diagram,
+        diagramType: data.diagramType,
       })
     } catch {
       setBusy(false)
@@ -186,10 +228,8 @@ export default function VoiceTutor() {
                     ? renderRichText(m.content)
                     : m.content}
                 </span>
-                {m.role === 'assistant' && m.diagram ? (
-                  <div className="mt-3 rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-900 ring-1 ring-emerald-900/10">
-                    Diagram suggested — swap with interactive canvas later.
-                  </div>
+                {m.role === 'assistant' && m.diagramType === 'ohms-law' ? (
+                  <OhmsLawDiagram />
                 ) : null}
                 {m.role === 'assistant' && m.recommendations?.length ? (
                   <RecommendationList items={m.recommendations} />
@@ -204,11 +244,7 @@ export default function VoiceTutor() {
                   text={streamingText}
                   onComplete={handleStreamComplete}
                 />
-                {activeMeta?.diagram ? (
-                  <div className="mt-3 rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-900 ring-1 ring-emerald-900/10">
-                    Diagram suggested — swap with interactive canvas later.
-                  </div>
-                ) : null}
+                {activeMeta?.diagramType === 'ohms-law' ? <OhmsLawDiagram /> : null}
                 {activeMeta?.recommendations?.length ? (
                   <RecommendationList items={activeMeta.recommendations} />
                 ) : null}
@@ -232,15 +268,30 @@ export default function VoiceTutor() {
                   label={undefined}
                   hint={undefined}
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Type a question… (try “Explain Ohm’s Law simply”)"
+                  onChange={(e) => {
+                    if (demoVoiceIntervalRef.current) {
+                      clearInterval(demoVoiceIntervalRef.current)
+                      demoVoiceIntervalRef.current = null
+                    }
+                    setDraft(e.target.value)
+                  }}
+                  placeholder={
+                    listening
+                      ? 'Demo: mock transcript will type into this box…'
+                      : 'Type a question… (try “Explain Ohm’s Law simply”)'
+                  }
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault()
                       send(draft)
                     }
                   }}
-                  inputClassName="lg:py-3.5"
+                  inputClassName={[
+                    'lg:py-3.5',
+                    listening ? 'border-emerald-400/40 ring-2 ring-emerald-400/25' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                 />
               </div>
 
@@ -259,9 +310,7 @@ export default function VoiceTutor() {
                   title="Voice input (mock)"
                 >
                   <Mic className="h-5 w-5" aria-hidden />
-                  <span className="hidden sm:inline">
-                    {listening ? 'Listening…' : 'Voice'}
-                  </span>
+                  <span>{listening ? 'Listening…' : 'Voice'}</span>
                 </motion.button>
 
                 <Button type="button" disabled={busy} onClick={() => send(draft)}>
@@ -274,9 +323,25 @@ export default function VoiceTutor() {
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900 ring-1 ring-emerald-900/10"
+                className="mt-3 rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-50 to-teal-50/90 px-4 py-3 ring-1 ring-emerald-900/10"
+                role="status"
+                aria-live="polite"
               >
-                Voice capture is mocked — imagine live transcription appearing here.
+                <div className="flex items-start gap-3">
+                  <span
+                    className="mt-1.5 flex h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.25)]"
+                    aria-hidden
+                  />
+                  <div>
+                    <p className="text-sm font-extrabold text-emerald-950">
+                      Microphone is on
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-emerald-950/75">
+                      Demo mode: the bar above fills with sample speech-to-text so reviewers can see
+                      the flow without Web Speech API.
+                    </p>
+                  </div>
+                </div>
               </motion.div>
             ) : null}
           </div>

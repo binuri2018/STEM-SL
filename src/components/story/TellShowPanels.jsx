@@ -3,7 +3,18 @@ import { BookMarked, Leaf } from 'lucide-react'
 import { Card } from '../common/Card.jsx'
 import { renderRichText } from '../../utils/richText.jsx'
 
+function formatContextLane(context) {
+  if (!context || typeof context !== 'string') return ''
+  if (!context.includes('|')) return context
+  return context
+    .split('|')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(' · ')
+}
+
 export function TellShowPanels({ concept, explanation, story, context }) {
+  const lane = formatContextLane(context)
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Card hover={false} className="p-6 lg:p-7">
@@ -20,7 +31,7 @@ export function TellShowPanels({ concept, explanation, story, context }) {
         <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 ring-1 ring-emerald-900/10">
           <Leaf className="h-4 w-4" aria-hidden />
           Sri Lankan context lane:{' '}
-          <span className="capitalize">{context}</span>
+          <span className={lane.includes('·') ? '' : 'capitalize'}>{lane}</span>
         </div>
       </Card>
 
