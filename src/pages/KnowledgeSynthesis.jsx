@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Check,
   CheckCircle2,
   Download,
+  ExternalLink,
   Loader2,
   Microscope,
+  Play,
   Plus,
+  Sparkles,
   Upload,
   Wand2,
   Youtube,
@@ -20,6 +23,12 @@ import {
   synthesizeHandwritten,
   verifySyllabusNotes,
 } from '../services/aiService.js'
+import {
+  fetchNoEmbedVideoMeta,
+  getYouTubeApiKey,
+  searchYouTubeVideos,
+} from '../services/youtubeClient.js'
+import { VERIFY_TAG_YOUTUBE_CONFIG } from '../data/verifyTagYoutubeConfig.js'
 import { renderRichText } from '../utils/richText.jsx'
 
 const MAIN_TABS = [
@@ -71,6 +80,60 @@ const DEMO_VERIFICATION_ITEMS = [
   },
 ]
 
+function summaryFromApiDescription(desc, index) {
+  const t = (desc || '').replace(/\s+/g, ' ').trim()
+  if (!t) return `Clip ${index + 1}: open on YouTube to read the full description and transcript.`
+  return t.length > 480 ? `${t.slice(0, 477)}…` : t
+}
+
+function VerifyVideoThumb({ thumbnailUrl, title }) {
+  const [imgOk, setImgOk] = useState(true)
+
+  useEffect(() => {
+    setImgOk(true)
+  }, [thumbnailUrl])
+
+  return (
+    <div className="relative aspect-video overflow-hidden bg-slate-900">
+      {thumbnailUrl && imgOk ? (
+        <img
+          src={thumbnailUrl}
+          alt=""
+          width={640}
+          height={360}
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setImgOk(false)}
+        />
+      ) : null}
+      <div
+        className={[
+          'pointer-events-none absolute inset-0',
+          thumbnailUrl && imgOk
+            ? 'bg-gradient-to-t from-black/55 via-black/15 to-black/25'
+            : 'bg-gradient-to-br from-slate-800 via-emerald-900 to-teal-950',
+        ].join(' ')}
+        aria-hidden
+      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/35 ring-2 ring-white/35 backdrop-blur-[1px]">
+          <Play
+            className="h-6 w-6 translate-x-0.5 text-white drop-shadow-md"
+            fill="currentColor"
+            aria-hidden
+          />
+        </span>
+      </div>
+      <span className="absolute bottom-2 left-2 rounded bg-black/55 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/95 ring-1 ring-white/10">
+        YouTube
+      </span>
+      <span className="sr-only">Video thumbnail for {title}</span>
+    </div>
+  )
+}
+
 const LANGS = ['English', 'Sinhala', 'Tamil']
 
 const pillBase =
@@ -119,6 +182,23 @@ export default function KnowledgeSynthesis() {
   const [verifyPhase, setVerifyPhase] = useState('idle')
   const [verifyResult, setVerifyResult] = useState(null)
   const [correctedNoteReady, setCorrectedNoteReady] = useState(false)
+  /** @type {{ id: string; title: string; summary: string; watchUrl?: string } | null} */
+  const [verifyVideoSummary, setVerifyVideoSummary] = useState(null)
+  const verifyRelatedVideosRef = useRef(/** @type {HTMLDivElement | null} */ (null))
+  const [activeVerifyTagId, setActiveVerifyTagId] = useState(VERIFY_TAG_YOUTUBE_CONFIG[0]?.id ?? 'ohm')
+  /** @type {Record<string, { status: 'idle' | 'loading' | 'error' | 'done'; items: Array<{ videoId: string; title: string; channelTitle: string; thumbnailUrl: string; summary: string }>; error?: string }>} */
+  const [verifyTagVideos, setVerifyTagVideos] = useState({})
+  const [verifyYtNonce, setVerifyYtNonce] = useState(0)
+
+  const verifyTagVideosRef = useRef(verifyTagVideos)
+  verifyTagVideosRef.current = verifyTagVideos
+
+  const resetVerifyYoutubeBlock = useCallback(() => {
+    setVerifyTagVideos({})
+    setVerifyVideoSummary(null)
+    setVerifyYtNonce(0)
+    setActiveVerifyTagId(VERIFY_TAG_YOUTUBE_CONFIG[0]?.id ?? 'ohm')
+  }, [])
 
   const [ytUrl, setYtUrl] = useState('')
   const [ytTopic, setYtTopic] = useState('')
@@ -143,12 +223,13 @@ export default function KnowledgeSynthesis() {
     setVerifyResult(null)
     setVerifyPhase('idle')
     setCorrectedNoteReady(false)
+    resetVerifyYoutubeBlock()
     setExtractedText('')
     setPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev)
       return URL.createObjectURL(file)
     })
-  }, [])
+  }, [resetVerifyYoutubeBlock])
 
   const clearVerify = useCallback(() => {
     setSelectedFile(null)
@@ -158,11 +239,99 @@ export default function KnowledgeSynthesis() {
     setVerifyResult(null)
     setVerifyPhase('idle')
     setCorrectedNoteReady(false)
+    resetVerifyYoutubeBlock()
     setPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev)
       return null
     })
-  }, [])
+  }, [resetVerifyYoutubeBlock])
+
+  useEffect(() => {
+    if (!correctedNoteReady) return
+
+    const tagId = activeVerifyTagId
+    const tagCfg = VERIFY_TAG_YOUTUBE_CONFIG.find((t) => t.id === tagId)
+    if (!tagCfg) return
+
+    const snap = verifyTagVideosRef.current[tagId]
+    if (snap?.status === 'done' && snap.items.length > 0) return
+
+    let cancelled = false
+
+    setVerifyTagVideos((prev) => ({
+      ...prev,
+      [tagId]: { status: 'loading', items: [] },
+    }))
+
+    ;(async () => {
+      try {
+        let items = []
+        const hasKey = Boolean(getYouTubeApiKey())
+        if (hasKey) {
+          try {
+            const raw = await searchYouTubeVideos(tagCfg.searchQuery, 6)
+            items = (raw ?? []).map((v, i) => ({
+              videoId: v.videoId,
+              title: v.title,
+              channelTitle: v.channelTitle,
+              thumbnailUrl: v.thumbnailUrl,
+              summary: summaryFromApiDescription(v.description, i),
+            }))
+          } catch {
+            items = []
+          }
+        }
+        if (!cancelled && items.length === 0) {
+          const pairs = tagCfg.fallbackVideoIds.map((id, i) => ({
+            id,
+            sum: tagCfg.fallbackSummaries[i] ?? tagCfg.fallbackSummaries[0] ?? '',
+          }))
+          const metas = await Promise.all(
+            pairs.map(async ({ id, sum }) => {
+              try {
+                const m = await fetchNoEmbedVideoMeta(id)
+                return {
+                  videoId: m.videoId,
+                  title: m.title,
+                  channelTitle: m.channelTitle,
+                  thumbnailUrl: m.thumbnailUrl,
+                  summary: sum,
+                }
+              } catch {
+                return {
+                  videoId: id,
+                  title: 'YouTube clip',
+                  channelTitle: 'YouTube',
+                  thumbnailUrl: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+                  summary: sum,
+                }
+              }
+            }),
+          )
+          items = metas
+        }
+        if (cancelled) return
+        setVerifyTagVideos((prev) => ({
+          ...prev,
+          [tagId]: { status: 'done', items },
+        }))
+      } catch (e) {
+        if (cancelled) return
+        setVerifyTagVideos((prev) => ({
+          ...prev,
+          [tagId]: {
+            status: 'error',
+            items: [],
+            error: e instanceof Error ? e.message : 'Could not load videos',
+          },
+        }))
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [correctedNoteReady, activeVerifyTagId, verifyYtNonce])
 
   async function runExtract() {
     if (!selectedFile) return
@@ -170,6 +339,7 @@ export default function KnowledgeSynthesis() {
     setVerifyResult(null)
     setVerifyPhase('idle')
     setCorrectedNoteReady(false)
+    resetVerifyYoutubeBlock()
     const { data } = await synthesizeHandwritten(selectedFile.name)
     setOcrOutput(data)
     setExtractedText(data.extracted_text)
@@ -182,6 +352,7 @@ export default function KnowledgeSynthesis() {
     setVerifyPhase('loading')
     setVerifySubTab('verification')
     setCorrectedNoteReady(false)
+    resetVerifyYoutubeBlock()
     const { data } = await verifySyllabusNotes({
       text,
       errors: ocrOutput?.errors,
@@ -536,6 +707,176 @@ export default function KnowledgeSynthesis() {
                             </li>
                           ))}
                         </ul>
+                      </div>
+
+                      <div className="space-y-5 border-t border-emerald-900/10 pt-6">
+                        <div>
+                          <SectionLabel>Related topics</SectionLabel>
+                          <p className="mt-1 text-xs leading-relaxed text-emerald-950/60">
+                            Pick a tag to load matching clips. With{' '}
+                            <code className="rounded bg-emerald-100/80 px-1 py-0.5 text-[10px]">
+                              VITE_YOUTUBE_API_KEY
+                            </code>{' '}
+                            set, results come from YouTube search; otherwise curated IDs load via
+                            thumbnails and short summaries.
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {VERIFY_TAG_YOUTUBE_CONFIG.map((t) => {
+                              const isActive = t.id === activeVerifyTagId
+                              return (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => setActiveVerifyTagId(t.id)}
+                                  className={[
+                                    'rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2',
+                                    isActive
+                                      ? 'bg-teal-600 text-white shadow-sm ring-teal-700'
+                                      : 'bg-teal-50 text-teal-900 ring-teal-600/25 hover:bg-teal-100',
+                                  ].join(' ')}
+                                >
+                                  {t.label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                          <button
+                            type="button"
+                            className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-emerald-900/15 bg-emerald-950 px-4 py-2.5 text-sm font-bold text-white shadow-md ring-1 ring-emerald-900/40 transition hover:bg-emerald-900"
+                            onClick={() => {
+                              verifyRelatedVideosRef.current?.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start',
+                              })
+                              setVerifyTagVideos((prev) => {
+                                const next = { ...prev }
+                                delete next[activeVerifyTagId]
+                                return next
+                              })
+                              setVerifyYtNonce((n) => n + 1)
+                            }}
+                          >
+                            <Youtube className="h-4 w-4 shrink-0 text-red-400" aria-hidden />
+                            Find Videos
+                          </button>
+                        </div>
+
+                        <div ref={verifyRelatedVideosRef} className="scroll-mt-4 space-y-4">
+                          <h3
+                            className="text-xs font-extrabold uppercase tracking-[0.14em] text-emerald-800"
+                            id="verify-related-videos-heading"
+                          >
+                            {VERIFY_TAG_YOUTUBE_CONFIG.find((t) => t.id === activeVerifyTagId)
+                              ?.label ?? 'Videos'}
+                          </h3>
+                          {(() => {
+                            const st = verifyTagVideos[activeVerifyTagId]
+                            if (!st || st.status === 'loading') {
+                              return (
+                                <div className="flex items-center gap-2 py-10 text-sm text-emerald-950/60">
+                                  <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-hidden />
+                                  Loading videos…
+                                </div>
+                              )
+                            }
+                            if (st.status === 'error') {
+                              return (
+                                <p className="rounded-xl border border-red-200 bg-red-50/80 px-3 py-2 text-sm text-red-900">
+                                  {st.error ?? 'Could not load videos.'}
+                                </p>
+                              )
+                            }
+                            if (!st.items.length) {
+                              return (
+                                <p className="text-sm text-emerald-950/55">No videos found.</p>
+                              )
+                            }
+                            return (
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                {st.items.map((v) => (
+                                  <article
+                                    key={v.videoId}
+                                    className="flex flex-col overflow-hidden rounded-2xl border border-emerald-900/10 bg-white/95 ring-1 ring-emerald-950/5"
+                                  >
+                                    <VerifyVideoThumb
+                                      thumbnailUrl={v.thumbnailUrl}
+                                      title={v.title}
+                                    />
+                                    <div className="flex flex-1 flex-col gap-2 p-3">
+                                      <h4 className="text-sm font-bold leading-snug text-emerald-950">
+                                        {v.title}
+                                      </h4>
+                                      <p className="text-[11px] font-medium text-emerald-950/55">
+                                        {v.channelTitle}
+                                      </p>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setVerifyVideoSummary({
+                                            id: v.videoId,
+                                            title: v.title,
+                                            summary: v.summary,
+                                            watchUrl: `https://www.youtube.com/watch?v=${encodeURIComponent(v.videoId)}`,
+                                          })
+                                        }
+                                        className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-950 px-3 py-2 text-xs font-bold text-white ring-1 ring-emerald-900/50 transition hover:bg-emerald-900"
+                                      >
+                                        <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                        Summarize
+                                      </button>
+                                    </div>
+                                  </article>
+                                ))}
+                              </div>
+                            )
+                          })()}
+                        </div>
+
+                        <AnimatePresence mode="wait">
+                          {verifyVideoSummary ? (
+                            <motion.div
+                              key={verifyVideoSummary.id}
+                              role="region"
+                              aria-label="Video summary"
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -6 }}
+                              transition={{ duration: 0.22 }}
+                              className="rounded-2xl border-2 border-teal-500/70 bg-teal-50/40 p-4 ring-1 ring-teal-600/20 sm:p-5"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <p className="text-[10px] font-extrabold uppercase leading-snug tracking-[0.12em] text-emerald-950 sm:text-[11px]">
+                                  {verifyVideoSummary.title}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => setVerifyVideoSummary(null)}
+                                  className="shrink-0 rounded-lg border border-emerald-900/15 bg-white/90 px-2 py-1 text-[10px] font-bold text-emerald-900 ring-1 ring-emerald-900/10 hover:bg-emerald-50"
+                                >
+                                  Close
+                                </button>
+                              </div>
+                              <p className="mt-3 text-sm leading-relaxed text-emerald-950/90">
+                                {verifyVideoSummary.summary}
+                              </p>
+                              {verifyVideoSummary.watchUrl ? (
+                                <a
+                                  href={verifyVideoSummary.watchUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-teal-800 underline decoration-teal-600/40 underline-offset-2 hover:text-teal-950"
+                                >
+                                  Open on YouTube
+                                  <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                </a>
+                              ) : null}
+                              <p className="mt-2 text-[10px] font-medium text-emerald-950/45">
+                                Summary text is from the search snippet or a short revision note when
+                                no API key is configured — replace with transcript + LLM when wired.
+                              </p>
+                            </motion.div>
+                          ) : null}
+                        </AnimatePresence>
                       </div>
                     </>
                   )}
